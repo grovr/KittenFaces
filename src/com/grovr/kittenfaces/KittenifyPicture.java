@@ -149,18 +149,19 @@ public class KittenifyPicture extends Activity {
     
     public void kittenifyPicture(String location) {
     	Mat image = org.opencv.highgui.Highgui.imread(location, 1);
+    	
     	List<Rect> faceRects = findFaces(image);
     	cleanUpBitmap(kittenFacedBitmap);
     	System.gc();
-    	copyMatToBitmap(image, kittenFacedBitmap);
+    	copyMatToKittenFacedBitmap(image);
         image.release();
         image = null;
     	for (Rect faceRect : faceRects)
     	{
-    		addKittenToBitmapAtLocation(kittenFacedBitmap, faceRect);
+    		addKittenToKittenFacedBitmapAtLocation(faceRect);
     	}
     	writeImageToFile(location);
-    	
+ 	
         cleanUpBitmap(kittenFacedBitmap);
         System.gc();
         setResult();
@@ -182,11 +183,11 @@ public class KittenifyPicture extends Activity {
         
     }
 
-	private void copyMatToBitmap(Mat image, Bitmap bitmap)
+	private void copyMatToKittenFacedBitmap(Mat image)
 	{
         Imgproc.cvtColor(image, image, Imgproc.COLOR_BGR2RGBA);
-        kittenFacedBitmap = Bitmap.createBitmap(image.cols(), image.rows(), Bitmap.Config.ARGB_8888);
-        Utils.matToBitmap(image, bitmap);
+        kittenFacedBitmap = Bitmap.createBitmap(image.width(), image.height(), Bitmap.Config.ARGB_8888);
+        Utils.matToBitmap(image, kittenFacedBitmap);
 	}
     
 
@@ -198,13 +199,19 @@ public class KittenifyPicture extends Activity {
     	return greyVersion;
     }
     
-    private void addKittenToBitmapAtLocation(Bitmap bitmap, Rect rectToAddKittenAt) 
+    private void addKittenToKittenFacedBitmapAtLocation(Rect rectToAddKittenAt) 
     { 
-        Canvas canvas = new Canvas(bitmap); 
+        Canvas canvas = new Canvas(kittenFacedBitmap); 
         Bitmap kittenFaceBitmap = getRandomKittenBitmap();
-        android.graphics.Rect kittenFaceRect = getRectOfBitmap(kittenFaceBitmap);
-        android.graphics.RectF androidGraphicsRectToAddKittenAt = openCVRectToAndroidGraphicsRectF(rectToAddKittenAt);
-        canvas.drawBitmap(kittenFaceBitmap, kittenFaceRect, androidGraphicsRectToAddKittenAt, null);
+        android.graphics.Rect androidGraphicsRectToAddKittenAt = openCVRectToAndroidGraphicsRect(rectToAddKittenAt);
+        canvas.drawBitmap(kittenFaceBitmap, null, androidGraphicsRectToAddKittenAt, null);
+        try{
+        writeBitmapToLocation(kittenFaceBitmap, "/mnt/sdcard/DCIM/test" + rectToAddKittenAt.x + ".jpg");
+        }
+        catch (Exception e)
+        {
+        	
+        }
         cleanUpBitmap(kittenFaceBitmap);
         canvas = null;
         System.gc();
@@ -247,9 +254,9 @@ public class KittenifyPicture extends Activity {
         return new android.graphics.Rect(0, 0, width, height);
     }
     
-    private android.graphics.RectF openCVRectToAndroidGraphicsRectF(Rect rect)
+    private android.graphics.Rect openCVRectToAndroidGraphicsRect(Rect rect)
     {
-    	return new android.graphics.RectF(rect.x, rect.y, rect.width, rect.height);
+    	return new android.graphics.Rect(rect.x, rect.y, rect.width, rect.height);
     }
     
     private void writeImageToFile(String originalLocation)
@@ -257,7 +264,6 @@ public class KittenifyPicture extends Activity {
     	kittenPhotoLocation = kittenImageLocation(originalLocation);
     	try 
     	{
-    		Log.d(KittenFacesActivity.TAG, "KittenPhotoLocation is " + kittenPhotoLocation);
     		writeBitmapToLocation(kittenFacedBitmap, kittenPhotoLocation);
     	}
     	catch (Exception e)
@@ -275,13 +281,10 @@ public class KittenifyPicture extends Activity {
         return kittenLocBuff.toString();
     }
     
-    private void writeBitmapToLocation(Bitmap bitmap, String location) throws FileNotFoundException//, IOException
+    private void writeBitmapToLocation(Bitmap bitmap, String location) throws FileNotFoundException
     {
-		Log.d(KittenFacesActivity.TAG, "Bitmap dimensions are " + bitmap.getWidth() + " " + bitmap.getHeight());
         FileOutputStream out = new FileOutputStream(location);
         boolean success = bitmap.compress(Bitmap.CompressFormat.JPEG, 90, out);
-        Log.d(KittenFacesActivity.TAG, "Success? " + success);
-       // out.close();
     }
     
     private void setResult()
