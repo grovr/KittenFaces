@@ -4,17 +4,18 @@
     android:layout_width="fill_parent"
     android:layout_height="fill_parent"
     android:layout_gravity="center"
+    android:background="@raw/catback600"
     >
     <Button android:id="@+id/gallerybutton"
-            android:layout_width="wrap_content"
+            android:layout_width="fill_parent"
             android:layout_height="wrap_content"
-            android:text="Select photo from Gallery"
+            android:text="Kitten Face a photo that's on your phone"
   			android:layout_gravity="center" />
             
     <Button android:id="@+id/camerabutton"
-            android:layout_width="wrap_content"
+            android:layout_width="fill_parent"
             android:layout_height="wrap_content"
-            android:text="Take new photo"
+            android:text="Take a new photo to Kitten Face"
   			android:layout_gravity="center"
             android:layout_below="@id/gallerybutton" />	
     <TextView android:id="@+id/touchtext"
@@ -22,7 +23,14 @@
 			android:layout_width="wrap_content"
 			android:layout_height="wrap_content"
 			android:layout_gravity="center"
+			android:background="#000000"
             android:layout_below="@id/camerabutton"/>
+    <Button android:id="@+id/getptobutton"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:text="Click here to get Pro version which produces full resolution pictures"
+  			android:layout_gravity="center"
+            android:layout_below="@+id/touchtext" />	
 	<ImageView android:id="@+id/facedimage"
 			android:layout_width="fill_parent"
 			android:layout_height="fill_parent"/>

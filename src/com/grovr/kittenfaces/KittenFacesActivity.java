@@ -2,8 +2,13 @@ package com.grovr.kittenfaces;
 
 import com.grovr.kittenfaces.*;
 
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.security.MessageDigest;
@@ -18,6 +23,8 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
+import android.content.pm.PackageManager.NameNotFoundException;
 import android.content.res.Resources;
 import android.database.Cursor;
 import android.graphics.Bitmap;
@@ -61,36 +68,30 @@ public class KittenFacesActivity extends Activity {
 	private static final int TAKE_PHOTO = 2;
 	private static final int KITTENIFY_PHOTO = 3;
 	
-	private static final int MAX_NO_PICS = 3;
+	private static final int MAX_NO_PICS_KITTENIFIED = 666;
 	
 	public static final String TAG = "KITTEN_FACES";
 	public static final String originalPhotoLocationID = "ORIGINAL_PHOTO_LOCATION";
-	private static final String PHOTOS_TAKEN = "PHOTOS_TAKEN";
+	public static final String doWeScaleID = "DO_WE_SCALE";
+	private static final String PHOTOS_KITTENIFIED = "PHOTOS_TAKEN";
 
-	private String iSelectedImagePath;
-
-	private String iFilemanagerstring;
-	
 	private String iKittenPhotoLocation;
 	
+    private Intent galleryInent;
     
-    private Intent iGalleryIntent;
+    private Intent cameraIntent;
     
-    private Intent iCameraIntent;
+    private Uri photoFileUri;    
     
-    private Uri iPhotoPath;    
-    
-    private Intent iPhotoViewIntent;
+    private Intent photoViewIntent;
     
     private Intent iKittenifyPhotoIntent;
     
-    private File iKittenFile;
+    private File countFile;
     
-    private SharedPreferences iPrefs;
+    private int numOfPicsDone;
     
-    private int iNumOfPicsDone;
-    
-    private AlertDialog iTooManyPicsPopup;
+    private AlertDialog limitReachedPopup;
     
 
 	
@@ -99,7 +100,21 @@ public class KittenFacesActivity extends Activity {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.main);
+             
+        createLimitReachedDialog();
+        setupInitialPhotosKittenifiedCount();
+        ifShouldntAllowMoreShowDialog();
         
+        setupGalleryIntentAndButton();
+        setupCameraIntentAndButton();      
+        setupPhotoViewIntentAndButton();
+
+	    iKittenifyPhotoIntent = new Intent(this, KittenifyPicture.class);
+
+    }
+    
+    private void createLimitReachedDialog()
+    {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setMessage("Please purchase the full version to Kittenify more photos")
                .setCancelable(false)
@@ -113,133 +128,178 @@ public class KittenFacesActivity extends Activity {
                         finish();
                    }
                });
-        iTooManyPicsPopup = builder.create();
-        
-        Context mContext = this.getApplicationContext();
-        iPrefs = mContext.getSharedPreferences("KittenFacesPrefs", 0);
-        
-        iNumOfPicsDone = iPrefs.getInt(PHOTOS_TAKEN, 0);
-        
-        if (iNumOfPicsDone >= MAX_NO_PICS)
+        limitReachedPopup = builder.create();
+    }
+    
+    private void goToMarket()
+    {
+    	Intent goToMarket = null;
+    	// TODO put in my key version of app here
+    	goToMarket = new Intent(Intent.ACTION_VIEW,Uri.parse("market://details?id=com.grovr.kittenfacespro"));
+    	startActivity(goToMarket);
+    	finish();
+    }
+    
+    private void setupInitialPhotosKittenifiedCount()
+    {
+    	String countFilePath = Environment.getExternalStorageDirectory().getName() + 
+    							File.separatorChar + 
+    							"Android/data/" + "system.ct";
+        countFile = new File(countFilePath);
+        try 
         {
-        	tooManyPhotosTaken();
-        	return;
+	        if(countFile.exists())
+	        {
+	        	FileInputStream fileInputStream = new FileInputStream(countFile);
+	        	DataInputStream dataInputStream = new DataInputStream(fileInputStream);
+	        	numOfPicsDone = dataInputStream.readInt();
+	        } 
+	        else
+	        {
+	        	countFile.getParentFile().mkdirs();
+	        	countFile.createNewFile();
+	        	numOfPicsDone = 0;
+	        }
         }
-        
-        
-        
-        
-        iGalleryIntent = new Intent(Intent.ACTION_GET_CONTENT);
-        iGalleryIntent.setType("image/*");
-        
-        setupCameraIntent();      
-
-        final Button galleryButton = (Button) findViewById(R.id.gallerybutton);
+        catch (Exception e)
+        {
+        	numOfPicsDone = 0;
+        }
+    }
+    
+    private void ifShouldntAllowMoreShowDialog()
+    {
+    	if (!isProVersionInstalled())
+    	{
+	    	if(limitHasBeenReached())
+	    	{
+	    		limitReachedPopup.show();
+	    	}
+    	}
+    }
+    
+    private boolean isProVersionInstalled()
+    {
+    	try
+    	{
+    		getPackageManager().getApplicationInfo("com.grovr.kittenfacespro",0);
+    		return true;
+    	}
+    	catch (NameNotFoundException e)
+    	{
+        	return false;
+    	}
+    }
+    
+    private boolean limitHasBeenReached()
+    {
+    	return numOfPicsDone > MAX_NO_PICS_KITTENIFIED;
+    }
+    
+    private void setupGalleryIntentAndButton()
+    {
+    	setupGalleryIntent();
+    	setupGalleryButton();
+    }
+    
+    private void setupGalleryIntent()
+    {
+        galleryInent = new Intent(Intent.ACTION_GET_CONTENT);
+        galleryInent.setType("image/*");
+    }
+    
+    private void setupGalleryButton()
+    {
+        Button galleryButton = (Button) findViewById(R.id.gallerybutton);
         galleryButton.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                if (iNumOfPicsDone >= MAX_NO_PICS)
-                {
-                	tooManyPhotosTaken();
-                	return;
-                }
-                // Launch Gallery selection here  
+            	ifShouldntAllowMoreShowDialog(); 
                 System.gc();
-                startActivityForResult(iGalleryIntent, SELECT_PICTURE);
-
+                startActivityForResult(galleryInent, SELECT_PICTURE);
             }
         });
-        
-        final Button cameraButton = (Button) findViewById(R.id.camerabutton);
-        cameraButton.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                // Launch Camera here
-        //    	startActivity(kittenifyPhotoIntent);
-                if (iNumOfPicsDone >= MAX_NO_PICS)
-                {
-                	tooManyPhotosTaken();
-                	return;
-                }
-
-                System.gc();
-            	setupCameraIntent();
-            	System.gc();
-            	startActivityForResult(iCameraIntent, TAKE_PHOTO);
-            }
-        });
-        
-
-	    iPhotoViewIntent = new Intent(Intent.ACTION_VIEW);
-	    
-	    iKittenifyPhotoIntent = new Intent(this, KittenifyPicture.class);
-	    
-        
-		final ImageView imageView = (ImageView) findViewById(R.id.facedimage);
-		imageView.setVisibility(imageView.INVISIBLE);
-		imageView.setOnClickListener(new View.OnClickListener() {
-			@Override
-			public void onClick(View v) {
-				if (imageView.getVisibility() == imageView.VISIBLE)
-				{
-					Uri uri = Uri.fromFile(new File(iKittenPhotoLocation)); 
-				    iPhotoViewIntent.setDataAndType(uri, "image/*");
-				    Log.d(TAG, iKittenPhotoLocation);
-				    Log.d(TAG, uri.toString());
-					startActivity(iPhotoViewIntent);
-				}
-			}
-		});
-
     }
     
-    private void tooManyPhotosTaken()
+    private void setupCameraIntentAndButton()
     {
-    	iTooManyPicsPopup.show();
+    	setupCameraIntent();
+    	if (cameraIntent != null)
+    	{
+    		setupCameraButton();		
+    	}
+    	else
+    	{
+    		Button cameraButton = (Button) findViewById(R.id.camerabutton);
+    		cameraButton.setVisibility(cameraButton.INVISIBLE);
+    	}
     }
     
     
-    public void setupCameraIntent(){
-    	String storageState = Environment.getExternalStorageState();
-        if(storageState.equals(Environment.MEDIA_MOUNTED)) {
-
-        	Time theTime = new Time();
-        	theTime.setToNow();
-        	String time = theTime.toString();
-            String path = Environment.getExternalStorageDirectory().getName() + File.separatorChar + "Android/data/" + this.getPackageName() + "/files/" + md5(time) + ".jpg";
-            File photoFile = new File(path);
-            try {
-                if(photoFile.exists() == false) {
-                	photoFile.getParentFile().mkdirs();
-                	photoFile.createNewFile();
-                }
-
-            } catch (IOException e) {
-                Log.e(TAG, "Could not create file.", e);
-            }
-            Log.i(TAG, path);
-
-            iPhotoPath = Uri.fromFile(photoFile);
-            iCameraIntent = null;
-            System.gc();
-            iCameraIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE );
-            iCameraIntent.putExtra( MediaStore.EXTRA_OUTPUT, iPhotoPath);
+    private void setupCameraIntent(){
+        if(sDCardIsPresent()) {
+            cameraIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE );
         }   else {
-        	//TODO SD card not present
-        	Log.e(TAG, "SD card not present cannot use camera");
-         //   new AlertDialog.Builder(MainActivity.this)
-         //   .setMessage("External Storeage (SD Card) is required.\n\nCurrent state: " + storageState)
-         //   .setCancelable(true).create().show();
+            new AlertDialog.Builder(this)
+            .setMessage("External Storage (SD Card) is required to use camera.")
+            .setCancelable(true).create().show();
         }
 
+    }
+    
+    private boolean sDCardIsPresent()
+    {
+    	String storageState = Environment.getExternalStorageState();
+    	return storageState.equals(Environment.MEDIA_MOUNTED);
+    }
+    
+    private void setNewFileForCameraIntent()
+    {
+        String photoPath = generateRandomJpgPathOnSDCard();
+        File photoFile = createAndReturnFileAt(photoPath);
+        photoFileUri = Uri.fromFile(photoFile);
+        cameraIntent.putExtra( MediaStore.EXTRA_OUTPUT, photoFileUri);
+    }
+    
+    private File createAndReturnFileAt(String path)
+    {
+        File photoFile = new File(path);
+        try {
+            if(photoFile.exists() == false) {
+            	photoFile.getParentFile().mkdirs();
+            	photoFile.createNewFile();
+            }
+
+        } catch (IOException e) {
+            Log.e(TAG, "Could not create file.", e);
+        }
+        return photoFile;
+    }
+    
+    private String generateRandomJpgPathOnSDCard()
+    {
+    	String randomPath = Environment.getExternalStorageDirectory().getName() + 
+    						File.separatorChar + 
+    						"DCIM" + 
+    						File.separatorChar + 
+    						getRandomString() +
+    						".jpg";
+    	return randomPath;
+    }
+    
+    private String getRandomString()
+    {
+    	Time theTime = new Time();
+    	theTime.setToNow();
+    	String time = theTime.toString();
+    	return md5(time);
     }
     
     public String md5(String s) {
         try {
-            // Create MD5 Hash
             MessageDigest digest = java.security.MessageDigest.getInstance("MD5");
             digest.update(s.getBytes());
             byte messageDigest[] = digest.digest();
 
-            // Create Hex String
             StringBuffer hexString = new StringBuffer();
             for (int i=0; i<messageDigest.length; i++)
                 hexString.append(Integer.toHexString(0xFF & messageDigest[i]));
@@ -251,116 +311,165 @@ public class KittenFacesActivity extends Activity {
         return "";
     }
     
-    
-    private void goToMarket()
+    private void setupCameraButton()
     {
-    	Intent goToMarket = null;
-    	// TODO put in my key version of app here
-    	goToMarket = new Intent(Intent.ACTION_VIEW,Uri.parse("market://details?id=com.paulmaidment.games.flagsoftheworld"));
-    	startActivity(goToMarket);
-    	finish();
+        Button cameraButton = (Button) findViewById(R.id.camerabutton);
+        cameraButton.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+            	ifShouldntAllowMoreShowDialog();
+                System.gc();
+                setNewFileForCameraIntent();
+            	System.gc();
+            	startActivityForResult(cameraIntent, TAKE_PHOTO);
+            }
+        });
+    } 
+    
+    private void setupPhotoViewIntentAndButton()
+    {
+    	setupPhotoViewIntent();
+    	setupPhotoViewButton();
     }
-
+    
+    private void setupPhotoViewIntent()
+    {
+	    photoViewIntent = new Intent(Intent.ACTION_VIEW);
+    }
+    
+    private void setupPhotoViewButton()
+    {
+		final ImageView imageView = (ImageView) findViewById(R.id.facedimage);
+		imageView.setVisibility(imageView.INVISIBLE);
+		imageView.setOnClickListener(new View.OnClickListener() {
+			@Override
+			public void onClick(View v) {
+				if (imageView.getVisibility() == imageView.VISIBLE)
+				{
+					Uri uri = Uri.fromFile(new File(iKittenPhotoLocation)); 
+				    photoViewIntent.setDataAndType(uri, "image/*");
+					startActivity(photoViewIntent);
+				}
+			}
+		});
+    }
     
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
     	Log.d(TAG, "OnActivityResult Start " + SystemClock.elapsedRealtime());
         if (resultCode == RESULT_OK) {
             System.gc();
             if (requestCode == SELECT_PICTURE) {
-                Uri selectedImageUri = data.getData();
-
-                //OI FILE Manager
-                iFilemanagerstring = selectedImageUri.getPath();
-
-                //MEDIA GALLERY
-                iSelectedImagePath = getPath(selectedImageUri);
-
-                data = null;
-
-                //NOW WE HAVE OUR WANTED STRING
-                if(iSelectedImagePath!=null)
-                {
-                    Bundle bundle = new Bundle();
-                    bundle.putString(originalPhotoLocationID, iSelectedImagePath);
-                    iKittenifyPhotoIntent.putExtras(bundle);
-                	Log.d(TAG, "StartActivity Start " + SystemClock.elapsedRealtime());
-                    startActivityForResult(iKittenifyPhotoIntent, KITTENIFY_PHOTO);
-                }
-                else
-                {
-                    Bundle bundle = new Bundle();
-                    bundle.putString(originalPhotoLocationID, iFilemanagerstring);
-                    iKittenifyPhotoIntent.putExtras(bundle);
-                	Log.d(TAG, "StartActivity Start " + SystemClock.elapsedRealtime());
-                    startActivityForResult(iKittenifyPhotoIntent, KITTENIFY_PHOTO);
-                }
-                
-                
+            	kittenifyPhotoFromDataIn(data);
             }
             else if (requestCode == TAKE_PHOTO)
             {
-                //OI FILE Manager
-                iFilemanagerstring = iPhotoPath.getPath();
-
-                //MEDIA GALLERY
-                iSelectedImagePath = getPath(iPhotoPath);
-
-                data = null;
-                
-                //NOW WE HAVE OUR WANTED STRING
-                if(iSelectedImagePath!=null)
-                {
-                    Bundle bundle = new Bundle();
-                    bundle.putString(originalPhotoLocationID, iSelectedImagePath);
-                    iKittenifyPhotoIntent.putExtras(bundle);
-                    startActivityForResult(iKittenifyPhotoIntent, KITTENIFY_PHOTO);
-                }
-                else
-                {
-                    Bundle bundle = new Bundle();
-                    bundle.putString(originalPhotoLocationID, iFilemanagerstring);
-                    iKittenifyPhotoIntent.putExtras(bundle);
-                    startActivityForResult(iKittenifyPhotoIntent, KITTENIFY_PHOTO);
-                }
+            	kittenifyPhotoFromPhotoDataIn(data);
             }
-          	ImageView ourView = (ImageView) findViewById(R.id.facedimage);
-        	ourView.invalidate();
-        	ourView.setImageResource(0);
-        	ourView.invalidate();
-        	ourView.setVisibility(ourView.INVISIBLE);
-        	TextView ourText = (TextView) findViewById(R.id.touchtext);
-        	ourText.setText("");
+            emptyImageView();
             if (requestCode == KITTENIFY_PHOTO)
             {
-                SharedPreferences.Editor edit = iPrefs.edit();
-                iNumOfPicsDone++;
-                edit.putInt(PHOTOS_TAKEN, iNumOfPicsDone);
-                edit.commit();
+            	incrementNumOfPicsDone();
             	iKittenPhotoLocation = data.getStringExtra(KittenifyPicture.kittenifiedPhotoLocationID);
-            	//kittenBitmap = BitmapFactory.decodeFile(kittenPhotoLocation);
-            	iKittenFile = new File(iKittenPhotoLocation);
-            	ourView.setImageURI(Uri.fromFile(iKittenFile));
-            	ourText.setText("Touch picture to view");
-            	ourText.invalidate();
-            	ourView.setVisibility(ourView.VISIBLE);
+            	displayKittenPhotoInImageView();
             }
         }
+        else if (resultCode == RESULT_FIRST_USER)
+        {
+            new AlertDialog.Builder(this)
+            .setMessage("Sorry, something went wrong, please try again.")
+            .setCancelable(true).create().show();
+        }
+    }
+    
+    private void kittenifyPhotoFromDataIn(Intent getPictureIntent)
+    {
+    	Uri selectedImageUri = getPictureIntent.getData();
+        String selectedImagePath = getPath(selectedImageUri);
+        String filemanagerstring = selectedImageUri.getPath();
+        
+        kittenifyPhotoFromFirstLocationIfNotNullElseSecond(selectedImagePath, filemanagerstring);
+    }
+    
+    private void kittenifyPhotoFromPhotoDataIn(Intent getPhotoIntent)
+    {
+        String selectedImagePath = getPath(photoFileUri);
+        String filemanagerstring = photoFileUri.getPath();
+        
+        kittenifyPhotoFromFirstLocationIfNotNullElseSecond(selectedImagePath, filemanagerstring);
+    }
+    
+    private void kittenifyPhotoFromFirstLocationIfNotNullElseSecond(String firstLocation, String secondLocation)
+    {
+        if(firstLocation!=null)
+        {
+        	kittenifyPhotoAtLocation(firstLocation);
+        }
+        else
+        {
+        	kittenifyPhotoAtLocation(secondLocation);
+        }
+    }
+     
+    private void kittenifyPhotoAtLocation(String location)
+    {
+    	Bundle bundle = new Bundle();
+    	bundle.putString(originalPhotoLocationID, location);
+    	iKittenifyPhotoIntent.putExtras(bundle);
+    	startActivityForResult(iKittenifyPhotoIntent, KITTENIFY_PHOTO);
+    }
+    
+    private void emptyImageView()
+    {
+      	ImageView ourView = (ImageView) findViewById(R.id.facedimage);
+    	ourView.invalidate();
+    	ourView.setImageResource(0);
+    	ourView.invalidate();
+    	ourView.setVisibility(ourView.INVISIBLE);
+    	TextView ourText = (TextView) findViewById(R.id.touchtext);
+    	ourText.setText("");
+    }
+    
+    private void incrementNumOfPicsDone()
+    {
+        numOfPicsDone++;
+    	FileOutputStream fileOutputStream;
+		try
+		{
+			fileOutputStream = new FileOutputStream(countFile);
+	    	DataOutputStream dataOutputStream = new DataOutputStream(fileOutputStream);
+	    	dataOutputStream.writeInt(numOfPicsDone);
+		} 
+		catch (Exception e) 
+		{
+		}
+    }
+    
+    private void displayKittenPhotoInImageView()
+    {
+    	File kittenFile = new File(iKittenPhotoLocation);
+    	
+    	ImageView ourView = (ImageView) findViewById(R.id.facedimage);
+    	ourView.setImageURI(Uri.fromFile(kittenFile));
+    	ourView.setVisibility(ourView.VISIBLE);
+    	
+    	TextView ourText = (TextView) findViewById(R.id.touchtext);
+    	ourText.setText("Touch picture to view");
+    	ourText.invalidate();
     }
 
-    //UPDATED!
     public String getPath(Uri uri) {
         String[] projection = { MediaStore.Images.Media.DATA };
         Cursor cursor = managedQuery(uri, projection, null, null, null);
         if(cursor!=null)
         {
-            //HERE YOU WILL GET A NULLPOINTER IF CURSOR IS NULL
-            //THIS CAN BE, IF YOU USED OI FILE MANAGER FOR PICKING THE MEDIA
             int column_index = cursor
             .getColumnIndexOrThrow(MediaStore.Images.Media.DATA);
             cursor.moveToFirst();
             return cursor.getString(column_index);
         }
-        else return null;
+        else
+        {
+        	return null;
+        }
     }
     
 
