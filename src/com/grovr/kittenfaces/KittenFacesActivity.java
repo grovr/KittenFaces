@@ -62,7 +62,7 @@ public class KittenFacesActivity extends Activity {
 	}
 
 	private void setupDoWeScale() {
-		doWeScale = false;
+		doWeScale = true;
 	}
 
 	private void hideOrSetupProButton() {
