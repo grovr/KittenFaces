@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:orientation="vertical"
     android:layout_width="fill_parent"
     android:layout_height="fill_parent"
@@ -7,33 +7,39 @@
     android:background="@raw/catback600"
     >
     <Button android:id="@+id/gallerybutton"
+        	android:layout_marginTop="10px"
             android:layout_width="fill_parent"
             android:layout_height="wrap_content"
-            android:text="Kitten Face a photo that's on your phone"
+            android:text="Kitten Face a photo from your phone"
   			android:layout_gravity="center" />
             
     <Button android:id="@+id/camerabutton"
+        	android:layout_marginTop="10px"
             android:layout_width="fill_parent"
             android:layout_height="wrap_content"
             android:text="Take a new photo to Kitten Face"
   			android:layout_gravity="center"
             android:layout_below="@id/gallerybutton" />	
-    <TextView android:id="@+id/touchtext"
-			android:text=""
-			android:layout_width="wrap_content"
-			android:layout_height="wrap_content"
-			android:layout_gravity="center"
-			android:background="#000000"
-            android:layout_below="@id/camerabutton"/>
-    <Button android:id="@+id/getptobutton"
+    <Button android:id="@+id/getprobutton"
+        	android:layout_marginTop="10px"
             android:layout_width="fill_parent"
             android:layout_height="wrap_content"
-            android:text="Click here to get Pro version which produces full resolution pictures"
+            android:text="Get Pro version with full size pictures and no watermark"
   			android:layout_gravity="center"
-            android:layout_below="@+id/touchtext" />	
+            android:layout_below="@+id/camerabutton" />	
 	<ImageView android:id="@+id/facedimage"
+        	android:layout_marginTop="10px"
 			android:layout_width="fill_parent"
-			android:layout_height="fill_parent"/>
+			android:layout_height="fill_parent"
+			android:layout_below="@+id/getprobutton"/>
+    <TextView android:id="@+id/touchtext"
+        	android:layout_marginTop="10px"
+			android:text=""
+			android:layout_width="fill_parent"
+			android:layout_height="wrap_content"
+			android:background="#000000"
+			android:gravity="center"
+            android:layout_alignParentBottom="true"/>
 
 
-</LinearLayout>
+</RelativeLayout>

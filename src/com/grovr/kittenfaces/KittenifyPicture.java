@@ -26,11 +26,8 @@ import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
-import android.graphics.Paint.Style;
 import android.os.Bundle;
-import android.os.SystemClock;
 import android.util.Log;
-import android.widget.ImageView;
 
 public class KittenifyPicture extends Activity {
 
@@ -50,7 +47,7 @@ public class KittenifyPicture extends Activity {
 
 	private final int numOfKittenImages = 6;
 
-	private boolean doWeScale;
+	private boolean isFreeVersion;
 	
 	private final int maxWidth = 300;
 
@@ -66,7 +63,7 @@ public class KittenifyPicture extends Activity {
 		Bundle bundle = this.getIntent().getExtras();
 		originalPhotoLocation = bundle
 				.getString(KittenFacesActivity.originalPhotoLocationID);
-		doWeScale = bundle.getBoolean(KittenFacesActivity.doWeScaleID);
+		isFreeVersion = bundle.getBoolean(KittenFacesActivity.doWeScaleID);
 		if (!isRunning) {
 			isRunning = true;
 			Thread t = new Thread(new Runnable() {
@@ -155,7 +152,7 @@ public class KittenifyPicture extends Activity {
 		image.release();
 		image = null;
 		addKittensToKittenFacedBitmapAtLocations(faceRects);
-		if (doWeScale) {
+		if (isFreeVersion) {
 			scaleKittenFacedImage();
 		}
 		writeImageToFile(location);
@@ -198,6 +195,9 @@ public class KittenifyPicture extends Activity {
 		Canvas canvas = new Canvas(kittenFacedBitmap);
 		for (Rect faceRect : rectsToAddKittensAt) {
 			addKittenToCanvasAtLocation(canvas, faceRect);
+		}
+		if (isFreeVersion){
+			drawOnWatermark(canvas);
 		}
 		canvas = null;
 		System.gc();
@@ -253,6 +253,13 @@ public class KittenifyPicture extends Activity {
 				rect.y + rect.height);
 	}
 	
+	private void drawOnWatermark(Canvas canvas) {
+		Paint paint = new Paint();
+		paint.setColor(Color.CYAN);
+		paint.setTextSize(canvas.getHeight()/20);
+		canvas.drawText("Kitten Faces Free", 0, canvas.getHeight()/20, paint);	
+	}
+	
 	private void scaleKittenFacedImage() {
 		double heightToWidthRatio = ((double) kittenFacedBitmap.getHeight()) / ((double) kittenFacedBitmap.getWidth());
 		kittenFacedBitmap = Bitmap.createScaledBitmap(kittenFacedBitmap, maxWidth, (int) (maxWidth * heightToWidthRatio), true);
@@ -263,6 +270,7 @@ public class KittenifyPicture extends Activity {
 		try {
 			writeBitmapToLocation(kittenFacedBitmap, kittenPhotoLocation);
 		} catch (Exception e) {
+			Log.e(KittenFacesActivity.TAG, "Image writing failed " + e.toString());
 			exitActivityWithFailure();
 		}
 	}
