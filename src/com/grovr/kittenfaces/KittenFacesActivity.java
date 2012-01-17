@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Intent;
@@ -15,6 +16,8 @@ import android.os.SystemClock;
 import android.provider.MediaStore;
 import android.text.format.Time;
 import android.util.Log;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
@@ -29,6 +32,8 @@ public class KittenFacesActivity extends Activity {
 	public static final String TAG = "KITTEN_FACES";
 	public static final String originalPhotoLocationID = "ORIGINAL_PHOTO_LOCATION";
 	public static final String doWeScaleID = "DO_WE_SCALE";
+	
+	public static final int ABOUT_ID = Menu.FIRST;
 
 	private String iKittenPhotoLocation;
 
@@ -59,6 +64,31 @@ public class KittenFacesActivity extends Activity {
 
 		iKittenifyPhotoIntent = new Intent(this, KittenifyPicture.class);
 
+	}
+	
+	@Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        boolean result = super.onCreateOptionsMenu(menu);
+        menu.add(0, ABOUT_ID, 0, R.string.menu_about);
+        return result;
+    }
+	
+	@Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+        case ABOUT_ID:
+            showAbout();
+            return true;
+        }
+       
+        return super.onOptionsItemSelected(item);
+    }
+	
+	private void showAbout() {
+		new AlertDialog.Builder(this)
+			.setMessage(
+					"Copyright 2012 Matthew Grover")
+			.setCancelable(true).create().show();
 	}
 
 	private void setupDoWeScale() {
