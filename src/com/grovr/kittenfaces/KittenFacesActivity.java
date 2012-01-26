@@ -16,6 +16,7 @@ import android.os.SystemClock;
 import android.provider.MediaStore;
 import android.text.format.Time;
 import android.util.Log;
+import android.view.Gravity;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -32,8 +33,9 @@ public class KittenFacesActivity extends Activity {
 	public static final String TAG = "KITTEN_FACES";
 	public static final String originalPhotoLocationID = "ORIGINAL_PHOTO_LOCATION";
 	public static final String doWeScaleID = "DO_WE_SCALE";
-	
+
 	public static final int ABOUT_ID = Menu.FIRST;
+	public static final int LICENSE_ID = Menu.FIRST + 1;
 
 	private String iKittenPhotoLocation;
 
@@ -70,6 +72,7 @@ public class KittenFacesActivity extends Activity {
     public boolean onCreateOptionsMenu(Menu menu) {
         boolean result = super.onCreateOptionsMenu(menu);
         menu.add(0, ABOUT_ID, 0, R.string.menu_about);
+        menu.add(0, LICENSE_ID, 0, R.string.menu_license);
         return result;
     }
 	
@@ -79,15 +82,28 @@ public class KittenFacesActivity extends Activity {
         case ABOUT_ID:
             showAbout();
             return true;
+        case LICENSE_ID:
+            showLicense();
+            return true;
         }
        
         return super.onOptionsItemSelected(item);
     }
 	
 	private void showAbout() {
+		TextView myMsg = new TextView(this);
+		myMsg.setText("Copyright 2012 Matthew Grover\nEmail: kittenfaces@grovr.co.uk");
+		myMsg.setGravity(Gravity.CENTER_HORIZONTAL);
+
 		new AlertDialog.Builder(this)
-			.setMessage(
-					"Copyright 2012 Matthew Grover")
+			.setView(myMsg)
+			.setCancelable(true).create().show();
+
+	}
+	
+	private void showLicense() {
+		new AlertDialog.Builder(this)
+			.setMessage(R.string.opencv_license)
 			.setCancelable(true).create().show();
 	}
 
