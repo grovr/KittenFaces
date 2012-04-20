@@ -34,6 +34,8 @@ public class KittenFacesActivity extends Activity {
 	private Intent galleryInent;
 
 	private Intent cameraIntent;
+	
+	private Intent shareIntent;
 
 	private Uri photoFileUri;
 
@@ -55,6 +57,7 @@ public class KittenFacesActivity extends Activity {
 		setupGalleryIntentAndButton();
 		setupCameraIntentAndButton();
 		setupPhotoViewIntentAndButton();
+		setupShareIntentAndButton();
 
 		iKittenifyPhotoIntent = new Intent(this, KittenifyPicture.class);
 	}
@@ -101,6 +104,28 @@ public class KittenFacesActivity extends Activity {
 			public void onClick(View v) {
 				System.gc();
 				startActivityForResult(galleryInent, SELECT_PICTURE);
+			}
+		});
+	}
+	
+	private void setupShareIntentAndButton() {
+		setupShareIntent();
+		setupShareButton();
+	}
+	
+	private void setupShareIntent() {
+			shareIntent = new Intent(Intent.ACTION_SEND);
+			shareIntent.setType("image/*");
+	}
+	
+	private void setupShareButton() {
+		Button shareButton = (Button) findViewById(R.id.sharebutton);
+		shareButton.setVisibility(Button.INVISIBLE);
+		shareButton.setOnClickListener(new View.OnClickListener() {
+			public void onClick(View v) {
+				Uri uri = Uri.fromFile(new File(iKittenPhotoLocation));
+				shareIntent.putExtra(Intent.EXTRA_STREAM, uri);
+				startActivity(shareIntent);
 			}
 		});
 	}
@@ -288,6 +313,9 @@ public class KittenFacesActivity extends Activity {
 
 	private void displayKittenPhotoInImageView() {
 		File kittenFile = new File(iKittenPhotoLocation);
+
+		Button shareButton = (Button) findViewById(R.id.sharebutton);
+		shareButton.setVisibility(Button.VISIBLE);
 
 		ImageView ourView = (ImageView) findViewById(R.id.facedimage);
 		ourView.setImageURI(Uri.fromFile(kittenFile));

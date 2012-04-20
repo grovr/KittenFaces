@@ -35,7 +35,7 @@ public class KittenifyPicture extends Activity {
 
 	private boolean isFreeVersion;
 	
-	private final int maxWidth = 300;
+	private final int scaledSmallestDimension = 300;
 
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -89,16 +89,21 @@ public class KittenifyPicture extends Activity {
 	private void createBitmapFromFile(String location) {
 		Bitmap immutable = BitmapFactory.decodeFile(location);
 		kittenFacedBitmap = immutable.copy(immutable.getConfig(), true);
+		cleanUpBitmap(immutable);
+		System.gc();
 	}
 	
 	private List<RectF> alternateFindFaces() {
-		FaceDetector fd = new FaceDetector(kittenFacedBitmap.getWidth(), kittenFacedBitmap.getHeight(), 100);
+		Bitmap bitmap565 = kittenFacedBitmap.copy(Bitmap.Config.RGB_565, true);
+		FaceDetector fd = new FaceDetector(bitmap565.getWidth(), bitmap565.getHeight(), 100);
 		Face[] faces = new Face[100];
-		int facesFound = fd.findFaces(kittenFacedBitmap, faces);
+		int facesFound = fd.findFaces(bitmap565, faces);
+		cleanUpBitmap(bitmap565);
+		System.gc();
 		List<RectF> faceRects = new LinkedList<RectF>();
 		for (int i=0; i<facesFound; i++) {
 			Face currentFace = faces[i];
-			if (currentFace.confidence() > 0.4) {
+			if (currentFace.confidence() > 0.3) {
 				PointF midPoint = new PointF();
 				currentFace.getMidPoint(midPoint);
 				float halfWidth = currentFace.eyesDistance() * 1.5f;
@@ -119,6 +124,8 @@ public class KittenifyPicture extends Activity {
 		List<RectF> faceRects = alternateFindFaces();
 
 		addKittensToKittenFacedBitmapAtLocations(faceRects);
+		faceRects = null;
+		System.gc();
 		if (isFreeVersion) {
 			scaleKittenFacedImage();
 		}
@@ -197,7 +204,11 @@ public class KittenifyPicture extends Activity {
 	
 	private void scaleKittenFacedImage() {
 		double heightToWidthRatio = ((double) kittenFacedBitmap.getHeight()) / ((double) kittenFacedBitmap.getWidth());
-		kittenFacedBitmap = Bitmap.createScaledBitmap(kittenFacedBitmap, maxWidth, (int) (maxWidth * heightToWidthRatio), true);
+		if (heightToWidthRatio > 1) {	
+			kittenFacedBitmap = Bitmap.createScaledBitmap(kittenFacedBitmap, scaledSmallestDimension, (int) (scaledSmallestDimension * heightToWidthRatio), true);
+		} else {
+			kittenFacedBitmap = Bitmap.createScaledBitmap(kittenFacedBitmap, (int) (scaledSmallestDimension / heightToWidthRatio), scaledSmallestDimension, true);	
+		}
 	}
 
 	private void writeImageToFile(String originalLocation) {
