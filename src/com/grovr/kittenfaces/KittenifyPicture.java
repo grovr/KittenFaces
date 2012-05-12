@@ -17,6 +17,7 @@ import android.graphics.PointF;
 import android.graphics.RectF;
 import android.media.FaceDetector;
 import android.media.FaceDetector.Face;
+import android.os.Build;
 import android.os.Bundle;
 
 public class KittenifyPicture extends Activity {
@@ -87,9 +88,15 @@ public class KittenifyPicture extends Activity {
 	}
 	
 	private void createBitmapFromFile(String location) {
-		Bitmap immutable = BitmapFactory.decodeFile(location);
-		kittenFacedBitmap = immutable.copy(immutable.getConfig(), true);
-		cleanUpBitmap(immutable);
+		if (Build.VERSION.SDK_INT < 11) {
+			Bitmap immutable = BitmapFactory.decodeFile(location);
+			kittenFacedBitmap = immutable.copy(immutable.getConfig(), true);
+			cleanUpBitmap(immutable);
+		} else {
+			BitmapFactory.Options options = new BitmapFactory.Options();
+			options.inMutable = true;
+			kittenFacedBitmap = BitmapFactory.decodeFile(location, options);
+		}
 		System.gc();
 	}
 	

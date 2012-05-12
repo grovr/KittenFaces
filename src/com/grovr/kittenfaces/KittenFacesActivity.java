@@ -19,7 +19,7 @@ import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
 
-public class KittenFacesActivity extends Activity {
+public class KittenFacesActivity extends com.zemariamm.appirater.AppiraterBase {
 
 	private static final int SELECT_PICTURE = 1;
 	private static final int TAKE_PHOTO = 2;
